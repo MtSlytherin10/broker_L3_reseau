@@ -10,6 +10,9 @@ int main() {
     struct sockaddr_in serv_addr;
     char message[1024];
     char buffer[1024] = {0};
+    int choix;
+    char produit[50];
+    int quantite;
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
     serv_addr.sin_family = AF_INET;
@@ -23,18 +26,68 @@ int main() {
 
     printf("--- Bienvenue chez le Broker ---\n"); 
 
-    while(1) {
-        printf("Entrez votre demande (ex: ACHAT 10 APPLE) ou 'exit': ");
-        fgets(message, 1024, stdin);
-        
-        if(strncmp(message, "exit", 4) == 0) break;
+   
 
-        send(sock, message, strlen(message), 0); 
-        read(sock, buffer, 1024); 
-        printf("Réponse Broker: %s\n", buffer);
+while(1) {
+    printf("\n--- MENU ---\n");
+    printf("1. Voir produits\n");
+    printf("2. Acheter\n");
+    printf("3. Vendre\n");
+    printf("4. Quitter\n");
+    printf("Choix: ");
+    
+    scanf("%d", &choix);
+    getchar(); // pour enlever le \n
+
+    if(choix == 4) break;
+   memset(message, 0, 1024);
+    switch(choix) {
+        case 1:
+            strcpy(message, "INFO");
+            break;
+        case 2: 
+            
+
+            printf("Produit: ");
+            scanf("%s", produit);
+
+            printf("Quantité: ");
+            scanf("%d", &quantite);
+            getchar();
+
+            sprintf(message, "ACHAT %s %d", produit, quantite);
+            break;
         
-        memset(buffer, 0, 1024);
+
+        case 3: {
+             printf("Produit: ");
+            scanf("%s", produit);
+
+            printf("Quantité: ");
+            scanf("%d", &quantite);
+            getchar();
+
+            sprintf(message, "VENTE %s %d", produit, quantite);
+            break;
+
+            }
+        default:
+            printf("Choix invalide\n");
+            continue;
     }
+
+    
+   printf("Commande envoyée: %s\n", message);
+   send(sock, message, strlen(message), 0);
+   int valread = read(sock, buffer, 1024);
+    if(valread <= 0) {
+        printf("Connexion perdue avec le serveur.\n");
+        break;
+    }
+    printf("Réponse Broker: %s\n", buffer);
+
+    memset(buffer, 0, 1024);
+}
 
     close(sock);
     return 0;
