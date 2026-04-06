@@ -11,21 +11,18 @@ typedef struct {
     int stock;
 } Portefeuille;
 
-// Le Broker commence avec beaucoup d'actions et un budget fixe 
 Portefeuille broker = {10000.0, 100}; 
 float prix_unitaire = 50.0;
-pthread_mutex_t verrou = PTHREAD_MUTEX_INITIALIZER; // Pour éviter que deux clients achètent la même action en même temps
+pthread_mutex_t verrou = PTHREAD_MUTEX_INITIALIZER;
 
-// Fonction pour écrire dans le fichier log 
 void write_log(char *message) {
     FILE *f = fopen("broker.log", "a");
     if (f == NULL) return;
     fprintf(f, "%s\n", message);
     fclose(f);
-    printf("LOG: %s\n", message); // Affiche aussi sur le terminal 
+    printf("LOG: %s\n", message);
 }
 
-// Fonction exécutée pour chaque nouveau client 
 void *handle_client(void *socket_desc) {
     int sock = *(int*)socket_desc;
     char buffer[1024] = {0};
@@ -33,10 +30,19 @@ void *handle_client(void *socket_desc) {
     
     write_log("Nouveau client connecté.");
 
-    // Boucle de communication avec ce client
     while(read(sock, buffer, 1024) > 0) {
-        if (strncmp(buffer, "ACHAT", 5) == 0) {
-            sscanf(buffer, "ACHAT %d", &quantite);
+        // --- COMMANDE INFO ---
+        if (strncmp(buffer, "INFO", 4) == 0) {
+            char reponse[1024];
+            pthread_mutex_lock(&verrou);
+            sprintf(reponse, "PRIX %.2f STOCK %d", prix_unitaire, broker.stock);
+            pthread_mutex_unlock(&verrou);
+            send(sock, reponse, strlen(reponse), 0);
+        } 
+        // --- COMMANDE ACHAT ---
+        else if (strncmp(buffer, "ACHAT", 5) == 0) {
+            // %*s ignore le nom du produit envoyé par le client
+            sscanf(buffer, "ACHAT %*s %d", &quantite);
             float total = quantite * prix_unitaire;
 
             pthread_mutex_lock(&verrou);
@@ -51,8 +57,9 @@ void *handle_client(void *socket_desc) {
             }
             pthread_mutex_unlock(&verrou);
         } 
+        // --- COMMANDE VENTE ---
         else if (strncmp(buffer, "VENTE", 5) == 0) {
-            sscanf(buffer, "VENTE %d", &quantite);
+            sscanf(buffer, "VENTE %*s %d", &quantite);
             float total = quantite * prix_unitaire;
 
             pthread_mutex_lock(&verrou);
@@ -77,7 +84,7 @@ void *handle_client(void *socket_desc) {
 }
 
 int main() {
-    int server_fd, new_socket, *new_sock;
+    int server_fd, new_socket;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
 
@@ -93,14 +100,14 @@ int main() {
 
     while((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))) {
         pthread_t client_thread;
-        new_sock = malloc(1);
+        int *new_sock = malloc(sizeof(int)); // Correction taille malloc
         *new_sock = new_socket;
 
-        // Création d'un thread pour gérer le client en parallèle 
         if(pthread_create(&client_thread, NULL, handle_client, (void*)new_sock) < 0) {
             perror("Erreur création thread");
-            return 1;
+            free(new_sock);
         }
+        pthread_detach(client_thread); // Libère les ressources du thread à la fin
     }
     return 0;
 }
