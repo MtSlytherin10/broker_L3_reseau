@@ -31,7 +31,19 @@ int main() {
         return -1;
     }
 
-    printf("--- Bienvenue chez le Broker ---\n"); 
+        printf("\n=======================================================\n");
+    printf("              PLATEFORME DE TRADING L3                 \n");
+    printf("=======================================================\n\n");
+
+    char nom_client[50];
+    printf("Veuillez saisir votre nom pour vous connecter : ");
+    
+    // Lire le nom tapé par l'utilisateur (avec les espaces s'il y en a)
+    fgets(nom_client, 50, stdin);
+    nom_client[strcspn(nom_client, "\n")] = 0; // Enlever le saut de ligne invisible à la fin
+
+    printf("\n>>> Authentification réussie. Bienvenue sur le marché, %s ! <<<\n", nom_client);
+    sleep(1);
 
     while(1) {
         printf("\n[MON PORTFEUILLE] Cash: %.2f | Actions: %d\n", mon_p.cash, mon_p.stock);
